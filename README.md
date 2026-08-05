@@ -17,4 +17,4 @@ The first commit is what I offically submitted for the project. My goal here is 
 
 ![Player Disconnects](screenshots/disconnect.png)
 
-[^1] I have permission from the professor to post it on here since he uses a different game each semester,
+[^1]: I have permission from the professor to post it on here since he uses a different game each semester,
