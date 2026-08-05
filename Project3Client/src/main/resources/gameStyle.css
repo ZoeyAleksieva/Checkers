@@ -1,0 +1,163 @@
+.stack-pane {
+    -fx-alignment: center;
+}
+
+.grid-pane {
+    -fx-background-color: #333;
+    -fx-padding: 10;
+}
+
+.border-pane {
+    -fx-background-color: #2b2b2b;
+}
+
+.list-view {
+    -fx-background-color: #1e1e1e;
+    -fx-control-inner-background: #1e1e1e;
+    -fx-border-color: #444;
+    -fx-border-width: 2;
+}
+
+.list-cell {
+    -fx-text-fill: white;
+}
+
+.button {
+    -fx-background-color: #444;
+    -fx-text-fill: white;
+}
+
+.stack-pane:hover {
+    -fx-effect: dropshadow(gaussian, orange, 30, 0.7, 0, 0);
+}
+
+.boardGrid {
+    -fx-border-color: black;
+    -fx-border-width: 4;
+    -fx-padding: 5;
+}
+
+.game-root {
+    -fx-background-color: #ebcad4;  /* #ebcad4 #751735*/
+}
+
+.top-bar {
+    -fx-alignment: center;
+    -fx-spacing: 150;
+    -fx-padding: 15;
+}
+
+.status-label {
+    -fx-text-fill: #ebcad4;
+    -fx-font-size: 16px;
+    -fx-font-family: "Georgia";
+}
+
+.board-container {
+    -fx-alignment: center;
+}
+
+.board-grid {
+    -fx-background-color: #5e122a;
+    -fx-padding: 5;
+}
+
+.board-cell {
+    -fx-background-color: #ebcad4;
+}
+
+.chat-root {
+    -fx-background-color: #5e122a;
+    -fx-padding: 10;
+}
+
+.chat-header {
+    -fx-alignment: center;
+}
+
+.chat-title {
+    -fx-text-fill: #ebcad4;
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+}
+
+.send-button {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-background-insets: 0;
+    -fx-background-radius: 0;
+    -fx-border-width: 0;
+    -fx-padding: 0;
+}
+
+.send-button:hover {
+    -fx-opacity: 0.8;
+    -fx-scale-y: 1.5;
+    -fx-scale-x: 1.5;
+}
+
+.send-button:pressed {
+    -fx-opacity: 0.5;
+    -fx-scale-x: 0.7;
+}
+
+
+.list-view {
+    -fx-background-color: #ebcad4;
+    -fx-control-inner-background: #ebcad4;
+    -fx-border-color: #a66b7a;
+    -fx-border-width: 2;
+}
+
+.list-cell {
+    -fx-text-fill: #751735;
+}
+
+.chat-input-box {
+    -fx-spacing: 5;
+    -fx-padding: 5;
+}
+
+.text-field {
+    -fx-background-color: #ebcad4;
+    -fx-text-fill: #751735;
+    -fx-background-radius: 6;
+}
+
+.submit-button {
+    -fx-background-color: #ebcad4;
+    -fx-text-fill: #751735;
+    -fx-font-weight: bold;
+    -fx-background-radius: 6;
+}
+
+.submit-button:hover {
+    -fx-background-color: #f3dbe3;
+    -fx-cursor: hand;
+}
+
+.quit-button {
+    -fx-background-color:  #751735;
+    -fx-text-fill: #ebcad4;
+    -fx-font-weight: bold;
+    -fx-background-radius: 6;
+}
+
+.quit-button:hover {
+    -fx-background-color: #ab4969;
+    -fx-cursor: hand;
+}
+
+.label {
+    -fx-text-fill: #751735;
+    -fx-font-size: 15px;
+    -fx-font-family: "Georgia";
+    -fx-font-style: bold;
+}
+
+.chat-title {
+    -fx-text-fill: #ebcad4;
+    -fx-font-size: 15px;
+    -fx-font-family: "Georgia";
+    -fx-font-style: bold;
+}
