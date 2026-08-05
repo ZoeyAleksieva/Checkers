@@ -1,17 +1,15 @@
 import java.io.Serializable;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Set;
 
-//hashmap groupName, recipients
 public class Message implements Serializable {
 
     private static final long serialVersionUID = 42L;
     public MsgType type;
 
-    //LOGIN1, LOGIN2, NEW_PLAYER
+    //LOGIN1
     public String username;
+
+    //LOGIN2
     public String password;
 
     //GAME_START -> for server to inform clients which player they are and give board
@@ -22,12 +20,11 @@ public class Message implements Serializable {
     public Move move;
 
     //MOVE_FEEDBACK -> feedback ONLY for player attempting to make move
-    public String content;
+    public String feedback;
 
-    //MOVE_RESULT-> move has been applied, sends updated board
+    //MOVE_RESULT-> move has been applied, sends updated board to BOTH
     public String playerTurn;
-    //also uses "board"
-    //also uses "content"
+    public String moveConfirmMsg;
 
     //GAME_OVER -> send to both the final board and who won
     public String winner; //if draw, winner is "Draw"
@@ -37,66 +34,80 @@ public class Message implements Serializable {
     public String sender;
     public String recipient;
 
-    //GAME_START - server sends initial game board and player info
-    Message(MsgType msgType, HashMap<String, Piece> playerTypes, Piece[][] board){
-        this.type = msgType;
-        this.playerTypes = playerTypes;
-        this.board = board;
-    }
-
-    //LOGIN1 - client message is username ->
-    //LOGIN1 - if approved, server sends back same message, if not-> message is "Error. Username already logged in."
-    //GAME_OVER -  server message is WINNER / "Draw"
-    Message(MsgType msgType, String message){
-        this.type = msgType;
-        if(msgType == MsgType.LOGIN1){
-            this.username = message;
-        }else if(msgType == MsgType.GAME_OVER){
-            this.winner = message;
-        }else if(msgType == MsgType.LOGIN2){
-            this.password = message;
-        }
-    }
-
     //NEW_PLAYER -> server sends if client sends LOGIN1 and user is NOT found
-    //LOGIN2 -> when password is wrong, server sends only msgType (client recognizes rejection through null fields)
     Message(MsgType msgType){
         this.type = msgType;
     }
 
+    //LOGIN1 - user sends username
+    //If approved, server sends back same message
+    //If not, sends empty string
+    public static Message loginName(String username){
+        Message msg = new Message(MsgType.LOGIN1);
+        msg.username = username;
+        return msg;
+    }
+
+    //LOGIN2 - user sends password
+    //If approved, server sends back same message
+    //If not, sends empty string
+    public static Message loginPswrd(String password){
+        Message msg = new Message(MsgType.LOGIN2);
+        msg.password = password;
+        return msg;
+    }
+
+    //GAME_START - server sends initial game board and player info
+    public static Message gameStart(HashMap<String, Piece> playerTypes, Piece[][] board){
+        Message msg = new Message(MsgType.GAME_START);
+        msg.playerTypes = playerTypes;
+        msg.board = board;
+        return msg;
+    }
+
     //MOVE
-    Message(MsgType msgType, Move move){
-        this.type = msgType;
-        this.move = move;
+    public static Message move( Move move){
+        Message msg = new Message(MsgType.MOVE);
+        msg.move = move;
+        return msg;
     }
 
-    //NEW_PLAYER -> user sends username and password
-    //LOGIN 2 - user sends name and password, if approved, server sends back same message but content says "Waiting for opp.."
-    //MOVE_FEEDBACK -- user is for server to know who to give the INDIVIDUAL feedback (content == feedback)
-    Message(MsgType msgType, String user, String content){
-        this.type = msgType;
-        this.username = user;
-        if(msgType == MsgType.MOVE_FEEDBACK){
-            this.content = content;
-        }else if(msgType == MsgType.LOGIN2 || msgType == MsgType.NEW_PLAYER){
-            this.password = content;
-        }
+    //MOVE_FEEDBACK
+    public static Message moveFeedback(String feedback){
+        Message msg = new Message(MsgType.MOVE_FEEDBACK);
+        msg.feedback = feedback;
+        return msg;
     }
 
-    //MOVE_RESULT -> content is confirmation of move/jump
-    Message(MsgType msgType, Piece[][] board, String content){
-        //type = msgType;
-        this.type = msgType;
-        this.board = board;
-        this.content = content;
+    //NEW_PLAYER
+    public static Message newPlayer(String password){
+        Message msg = new Message(MsgType.NEW_PLAYER);
+        msg.password = password;
+        return msg;
     }
 
-    //CLIENT_CHAT - for client to request to send message
-    Message(MsgType msgType, String sender, String recipient, String content){
-        this.type = msgType;
-        this.sender = sender;
-        this.recipient = recipient;
-        this.message = content;
+    //MOVE_RESULT
+    public static Message moveResult(Piece[][] board, String moveConfirmMsg, String playerTurn) {
+        Message msg = new Message(MsgType.MOVE_RESULT);
+        msg.board = board;
+        msg.moveConfirmMsg  = moveConfirmMsg;
+        msg.playerTurn = msg.playerTurn;
+        return msg;
     }
 
+    //GAME_OVER -  server message is "WINNER" or "Draw"
+    public static Message gameOver(String winner){
+        Message msg = new Message(MsgType.GAME_OVER);
+        msg.winner = winner;
+        return msg;
+    }
+
+    //CLIENT_CHAT
+    public static Message chat(String sender, String recipient, String message){
+        Message msg = new Message(MsgType.CLIENT_CHAT);
+        msg.sender = sender;
+        msg.recipient = recipient;
+        msg.message = message;
+        return msg;
+    }
 }

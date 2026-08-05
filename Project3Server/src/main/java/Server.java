@@ -372,6 +372,8 @@ public class Server{
 								} else {
 									//server sends same message back == "Hey I'm ready for your password"
 									System.out.println("Client " + requestedName + " found. Requesting password...");
+									//here say username = requestedName? but what if wrong password and tried another?
+									//well then client goes back to login1 and redoes it
 									sendToPlayer(String.valueOf(clientNumber), login);
 								}
 							} else {
@@ -391,6 +393,8 @@ public class Server{
 								//OFFICIALLY ACCEPTS PLAYER
 								username = requestedName;
 								clientThreads.put(username, this);
+
+
 								waitingPlayers.add(username);
 
 								//server sends same message back but changes content
@@ -409,6 +413,7 @@ public class Server{
 						}else{
 							 //login type is NEW_PLAYER
 							//user will only send a NEW_PLAYER message if server sends NEW_PLAYER which means username IS unique
+							//^^^so what is stopping you from saying username is requested name? BCS CLIENT THREADS TIED TO USERNAME
 							String client = login.username;
 							String password = login.password;
 							userPasswords.put(client, password);
