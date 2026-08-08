@@ -17,6 +17,9 @@ import java.util.function.Consumer;
 *   3) Refactor GameSession
 *   4) Fix minor issues in GameBoard and Move
 * */
+//TODO: Error handle --> if client chooses a username that's just a number, it might get confused with server's clientNumber
+//TODO: Stay organized --> name messages sent to client "msg" and name the ones sent to the GUI log "m"
+//TODO: Separate listViews on GUI for login feedback versus game loop feedback
 
 public class Server{
 
@@ -344,110 +347,112 @@ public class Server{
 				this.clientNumber = count;
 			}
 
+			private void handleLoginUsername(Message login){
+				requestedName = login.username;
+				if (userPasswords.containsKey(requestedName)) {
+					if (clientThreads.containsKey(requestedName)) {
+						//USER IS ALREADY LOGGED IN
+						String errorFeedback = "Client " + requestedName + " is already logged in. Enter unique username to create an account.";
+						Message msg = Message.rejectUser(errorFeedback);
+						sendToPlayer(String.valueOf(clientNumber), msg);
+
+						System.out.println("Client " + requestedName + " is already logged in.");
+					} else {
+						//ASK FOR PASSWORD
+						Message msg = new Message(MsgType.LOGIN2);
+						sendToPlayer(String.valueOf(clientNumber), msg);
+
+						System.out.println("Client " + requestedName + " found. Requesting password...");
+					}
+				} else {
+					Message msg = new Message(MsgType.NEW_PLAYER);
+					sendToPlayer(String.valueOf(clientNumber), msg);
+
+					System.out.println("Username " + requestedName + "not found. Waiting for new user to create a password.");
+				}
+			}
+			private boolean handleLoginPassword(Message login){
+				String password = login.password;
+				if (password.equals(userPasswords.get(requestedName))) {
+					//OFFICIALLY ACCEPTS PLAYER
+					username = requestedName;
+					clientThreads.put(username, this);
+					waitingPlayers.add(username);
+					System.out.println(username + "'s password got accepted");
+
+					Message msg = new Message(MsgType.ACCEPT_PASSWORD);
+					//login.content = "Welcome " + username + ". Waiting for opponent...";
+					sendToPlayer(username, msg);
+
+					//Update GUI
+					Message m = Message.updateGUIlog("[NEW USER ONLINE]: " + username);
+					callback.accept(m);
+
+					tryMatchingPlayers();
+					return true; //User accepted - BREAK OUT of login loop
+				} else { //PASSWORD IS WRONG
+					Message msg = new Message(MsgType.REJECT_USERNAME);
+					sendToPlayer(String.valueOf(clientNumber), msg);
+					System.out.println(requestedName + "'s password got denied");
+					return false; //User denied - DO NOT break out of login loop
+				}
+			}
+			private void handleNewPlayer(Message login){
+				username = requestedName;
+				String password = login.password;
+
+				userPasswords.put(username, password);
+				saveUserInfo(username,password);
+
+				clientThreads.put(username, this);
+				waitingPlayers.add(username);
+
+				Message msg = new Message(MsgType.ACCEPT_PASSWORD);
+				sendToPlayer(username, msg);
+
+				//Update GUI
+				Message m = Message.updateGUIlog("[NEW USER ONLINE]: " + username);
+				callback.accept(m);
+				tryMatchingPlayers();
+			}
+
 			public void run(){
 					
 				try {
 					out = new ObjectOutputStream(connection.getOutputStream());
 					in = new ObjectInputStream(connection.getInputStream());
 					connection.setTcpNoDelay(true);
-
-					while (true) { //[LOGIN LOOP]
+					//[LOGIN LOOP]----------------------------------------------------------------------------------------------
+					while (true) {
 						Message login = (Message) in.readObject();
 						if (login.type != MsgType.LOGIN1 && login.type != MsgType.LOGIN2 && login.type != MsgType.NEW_PLAYER) {
 							System.out.println("Client should not be sending non-LOGIN type messages yet!");
 							continue;
 						}
 
-						//LOGIN1 ----- user just sends username
 						if (login.type == MsgType.LOGIN1) {
-							requestedName = login.username;
-							//If username exists, request password. If not, tell them they are new
-							if (userPasswords.containsKey(requestedName)) {
-								if (clientThreads.containsKey(requestedName)) {
-									//USER IS ALREADY LOGGED IN
-									String error = "Client " + requestedName + " is already logged in. Enter unique username to create an account.";
-									System.out.println("Client " + requestedName + " is already logged in.");
-									Message msg = new Message(MsgType.LOGIN1, error); //error is in USERNAME field
-									sendToPlayer(String.valueOf(clientNumber), msg);
-								} else {
-									//server sends same message back == "Hey I'm ready for your password"
-									System.out.println("Client " + requestedName + " found. Requesting password...");
-									//here say username = requestedName? but what if wrong password and tried another?
-									//well then client goes back to login1 and redoes it
-									sendToPlayer(String.valueOf(clientNumber), login);
-								}
-							} else {
-								System.out.println("Username " + requestedName + "not found. Waiting for user to make password.");
-								Message msg = new Message(MsgType.NEW_PLAYER);
-								sendToPlayer(String.valueOf(clientNumber), msg);
-							}
-						} else if(login.type == MsgType.LOGIN2){ //LOGIN2 --- username was found, now accept/deny password
-							String client = login.username;
-							String password = login.password;
-							if (password.equals(userPasswords.get(client))) {
-								System.out.println(client + "'s password accepted");
-								if (!client.equals(requestedName)) {
-									System.out.println("CLIENT SENDS DIFF USERNAME FOR LOGIN1 & LOGIN2");
-									continue;
-								}
-								//OFFICIALLY ACCEPTS PLAYER
-								username = requestedName;
-								clientThreads.put(username, this);
-
-
-								waitingPlayers.add(username);
-
-								//server sends same message back but changes content
-								login.content = "Welcome " + username + ". Waiting for opponent...";
-								sendToPlayer(username, login);
-
-								//Update GUI
-								Message m = new Message(MsgType.GUI);
-								m.content = "[NEW USER ONLINE]: " + login.username;
-								callback.accept(m);
-								tryMatchingPlayers();
-								break; //CAN ONLY BREAK OUT OF LOGIN LOOP AFTER LOGGED ON SUCCESSFULLY
-							} else { //PASSWORD IS WRONG
-								sendToPlayer(String.valueOf(clientNumber), new Message(MsgType.LOGIN2));
-							}
-						}else{
-							 //login type is NEW_PLAYER
-							//user will only send a NEW_PLAYER message if server sends NEW_PLAYER which means username IS unique
-							//^^^so what is stopping you from saying username is requested name? BCS CLIENT THREADS TIED TO USERNAME
-							String client = login.username;
-							String password = login.password;
-							userPasswords.put(client, password);
-							saveUserInfo(client,password);
-
-							//OFFICIALLY ACCEPTS PLAYER
-							username = requestedName;
-							clientThreads.put(username, this);
-							waitingPlayers.add(username);
-
-							//server sends same message back but changes content and type
-							login.content = "Welcome " + username + ". Waiting for opponent...";
-							login.type = MsgType.LOGIN2;
-							sendToPlayer(username, login);
-
-							//Update GUI
-							Message m = new Message(MsgType.GUI);
-							m.content = "[NEW USER ONLINE]: " + login.username;
-							callback.accept(m);
-							tryMatchingPlayers();
-							break; //CAN ONLY BREAK OUT OF LOGIN LOOP AFTER LOGGED ON SUCCESSFULLY
+							handleLoginUsername(login);
+						} else if(login.type == MsgType.LOGIN2){
+							boolean userAccepted = handleLoginPassword(login);
+							if(userAccepted){break;}
+						}else{ //NEW_PLAYER
+							handleNewPlayer(login);
+							break;
 						}
 					}
 				}catch(Exception e) {
-					System.out.println("Streams not open");
+					System.out.println("Streams not open (login loop)");
 					userQuitCleanUp(username, e);
 				}
-				 while(true) { //[GAME LOOP]
+				//[GAME LOOP]---------------------------------------------------------------------------------------------------
+				 while(true) {
 					try {
-						Message data = (Message) in.readObject();
-						System.out.println("Message from " + username + " received");
-						handleMessage(data);
+						Message clientMessage = (Message) in.readObject();
+						//System.out.println("Message from " + username + " received");
+						handleMessage(clientMessage);
 					}
 					catch(Exception e) {
+						System.out.println("Streams not open (game loop)");
 						userQuitCleanUp(username, e);
 						break;
 					}
@@ -456,13 +461,3 @@ public class Server{
 			
 		}//end of client thread
 }
-
-//username enter only
-//IF recognized -> Change label to say enter password and change prompt text -> BUTTON TO GO BACK!!! maybe at top left? -> password message -> LOGIN
-//IF NOT -> pop up asking if you want to create an account w/ *username* - no->back to og screen - yes --> change message to make password -> NEW_PLAYER
-
-//class Player:
-/*
-* hashmap of opponents and active games
-*
-* */

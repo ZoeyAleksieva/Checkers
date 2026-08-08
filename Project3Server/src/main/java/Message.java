@@ -12,6 +12,9 @@ public class Message implements Serializable {
     //LOGIN2
     public String password;
 
+    //REJECT_USERNAME
+    public String rejectUserFeedback;
+
     //GAME_START -> for server to inform clients which player they are and give board
     HashMap<String, Piece> playerTypes = new HashMap<>();
     public Piece[][] board;
@@ -27,30 +30,38 @@ public class Message implements Serializable {
     public String moveConfirmMsg;
 
     //GAME_OVER -> send to both the final board and who won
-    public String winner; //if draw, winner is "Draw"
+    public String winner; //if no one wins, winner is "Draw"
 
     //CLIENT_CHAT
     public String message;
     public String sender;
     public String recipient;
 
+    //GUI
+    public String guiFeedback;
+
     //NEW_PLAYER -> server sends if client sends LOGIN1 and user is NOT found
+    //LOGIN2 -> server sends to prompt user for password
+    //ACCEPT_PASSWORD, REJECT_PASSWORD
     Message(MsgType msgType){
         this.type = msgType;
     }
 
     //LOGIN1 - user sends username
-    //If approved, server sends back same message
-    //If not, sends empty string
     public static Message loginName(String username){
         Message msg = new Message(MsgType.LOGIN1);
         msg.username = username;
         return msg;
     }
 
-    //LOGIN2 - user sends password
-    //If approved, server sends back same message
-    //If not, sends empty string
+    //REJECT_USERNAME - server sends if user is already logged in
+    public static Message rejectUser(String feedback){
+        Message msg = new Message(MsgType.REJECT_USERNAME);
+        msg.rejectUserFeedback = feedback;
+        return msg;
+    }
+
+   //LOGIN2 - client sends password
     public static Message loginPswrd(String password){
         Message msg = new Message(MsgType.LOGIN2);
         msg.password = password;
@@ -108,6 +119,13 @@ public class Message implements Serializable {
         msg.sender = sender;
         msg.recipient = recipient;
         msg.message = message;
+        return msg;
+    }
+
+    //GUI
+    public static Message updateGUIlog(String feedback){
+        Message msg = new Message(MsgType.GUI);
+        msg.guiFeedback = feedback;
         return msg;
     }
 }
