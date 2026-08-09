@@ -77,7 +77,7 @@ public class Message implements Serializable {
     }
 
     //MOVE
-    public static Message move( Move move){
+    public static Message move(Move move){
         Message msg = new Message(MsgType.MOVE);
         msg.move = move;
         return msg;
@@ -102,7 +102,7 @@ public class Message implements Serializable {
         Message msg = new Message(MsgType.MOVE_RESULT);
         msg.board = board;
         msg.moveConfirmMsg  = moveConfirmMsg;
-        msg.playerTurn = msg.playerTurn;
+        msg.playerTurn = playerTurn;
         return msg;
     }
 

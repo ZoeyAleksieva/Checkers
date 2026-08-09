@@ -31,7 +31,7 @@ public enum MsgType {
 
 /* REJECT_USERNAME
 *  1) Server -> Client
-*       -- sends if username EXISTS but there is already an active client thread logged in with that username
+*       -- sends if username exists BUT there is already an active client thread logged in with that username
 * */
 
 /* REJECT_PASSWORD

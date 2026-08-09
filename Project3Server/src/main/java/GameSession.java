@@ -1,7 +1,6 @@
 import java.util.ArrayList;
 import java.util.HashMap;
 
-//TODO: Refactor handleMove() but all else is perf
 
 public class GameSession {
 
@@ -45,36 +44,20 @@ public class GameSession {
     *  - Differentiate between normal move and jump
     *  - Get the list of what all the possible moves they could have made were
     *  - Reject move if they could have jumped but didn't. Send forced?
-    *  - If jump -> apply the move. Include if mustContinue jumping in message and forced locs
+    *  - If jump -> apply the move. Include if mustContinue jumping in message and include forced location
     *  - If jumped -> Check if game is over by calling function with CURRENT PLAYER and communicate when it is
     *  - Else if normal move -> apply and send board updates to both with switched turn
-    * Draw? Stuck playing? */
+    * ---------------------------------------------------------------*/
 
-    public Message handleMove(String username, Move move){
-        System.out.print(username + " wants to make move: ");
-        move.printMove();
+    private boolean isPlayerTurn(Piece playerColor){
+        return playerColor == currentTurn;
+    }
 
-        //----------------------------------------------------------------
-        // if(!playerTurn(username)) {return new Message(MsgType.MOVE_FEEDBACK, username, "Wait for your turn.");}
-        Piece player = playerTypes.get(username);
-        if(player != currentTurn){
-            return new Message(MsgType.MOVE_FEEDBACK, username, "Wait for your turn.");
-        }
-        //Before assessing move, check if it's a mustContinue
-        //technically can't this be if ((mustContinue) && (move.fromRow != mustMoveRow || move.fromCol != mustMoveCol))
-        if(mustContinue){
-            if(move.fromRow != mustMoveRow || move.fromCol != mustMoveCol){
-                return new Message(MsgType.MOVE_FEEDBACK, username,"Must continue jumping with same piece.");
-            }
-        }
-        //-----------------------------------------------------------------
-        //if the move is not in the possible moves or didn't jump
-        //TODO: Make these OBJECTS so they can be changed inside the function
+    private boolean[] getMoveValidity(String username, Piece playerColor, Move move){
         boolean valid = false;
         boolean canJump = false;
-        //CheckMoveValidity(valid, canJump);
-        ArrayList<Move> possibleMoves = board.getPlayerMoves(player);
-        System.out.println("POSSIBLE MOVES FOR " + player);
+        ArrayList<Move> possibleMoves = board.getPlayerMoves(playerColor);
+        System.out.println("POSSIBLE MOVES FOR " + playerColor);
         printPossibleMoves(possibleMoves);
 
         for(Move m : possibleMoves){
@@ -85,63 +68,82 @@ public class GameSession {
                 valid = true;
             }
         }
-        //------------------------------------------------------------------
-        if(canJump && !move.isJump){
-            return new Message(MsgType.MOVE_FEEDBACK, username, "You must jump.");
-        }
-        if(!valid){return new Message(MsgType.MOVE_FEEDBACK, username, "Invalid Move.");}
+        return new boolean[]{valid, canJump};
+    }
 
-        // function applyMove()-----------------------------------------
-        // return applyMove(username, move)
+    public Message handleMove(String username, Move move){
+        System.out.print(username + " wants to make move: ");
+        move.printMove();
+        Piece playerColor = playerTypes.get(username);
+        //----------------------------------------------------------------
+        if(!isPlayerTurn(playerColor)) {return Message.moveFeedback("Wait for your turn.");}
+
+        if (mustContinue && (move.fromRow != mustMoveRow || move.fromCol != mustMoveCol)){
+            return Message.moveFeedback("Must continue jumping with same piece.");
+        }
+        //-----------------------------------------------------------------
+        boolean[] validity = getMoveValidity(username, playerColor, move);
+        boolean valid = validity[0];
+        boolean canJump = validity[1];
+
+        if(canJump && !move.isJump){
+            return Message.moveFeedback("You must jump.");
+        }
+        if(!valid){return Message.moveFeedback("Invalid Move.");}
+        //------------------------------------------------------------------
+        //JUMP
         if(Math.abs(move.fromRow - move.toRow) == 2){move.isJump = true;}
         if(move.isJump){
-            //return applyJump(username, move)
-            movesWithoutCapture = 0;
-            board.movePiece(move);
-            boolean canContinue = board.canJumpAgain(move.toRow, move.toCol);
-            String jumpInfo = username + " captured a piece!";
-            Message msg = new Message(MsgType.MOVE_RESULT, board.copyBoard(), jumpInfo);
-            //add extra info to message if they can continue jump
-            if(canContinue){
-                mustContinue = true;
-                mustMoveRow = move.toRow;
-                mustMoveCol = move.toCol;
-                msg.playerTurn = username;
-                msg.content = username + " should keep jumping.";
-                return msg;
-            }else{
-                mustContinue = false;
-            }
-            //if jump happened and can't continue, check for game over
-            Message gameOverMsg = checkGameOver(player, username);
-            if(gameOverMsg != null) {return gameOverMsg;}
-            //if they can't continue jumping, switch turns
-            currentTurn = (currentTurn == Piece.BLACK) ? Piece.RED : Piece.BLACK;
-            msg.playerTurn = (currentTurn == Piece.BLACK) ? player1 : player2;
-            return msg;
+            return applyJump(username, playerColor, move);
         }
         //------------------------------------------------------------------
-        //if NOT jump, it's just a normal move
+        //NOT jump
         movesWithoutCapture++;
         if(movesWithoutCapture >= 40){
-            Message draw = new Message(MsgType.DRAW);
-            draw.username = username;
-            draw.winner = "Draw";
-            return draw;
+            return new Message(MsgType.DRAW);
         }
-        //------------------------------------------------------------------
-        //return applyNormalMove()
+        return applyMove(username, playerColor, move);
+    }
+
+    private Message applyJump(String username, Piece playerColor, Move move){
+        movesWithoutCapture = 0;
         board.movePiece(move);
-        Message gameOverMsg = checkGameOver(player, username);
+        boolean canContinue = board.canJumpAgain(move.toRow, move.toCol);
+
+        if(canContinue){
+            mustContinue = true;
+            mustMoveRow = move.toRow;
+            mustMoveCol = move.toCol;
+            String feedback = username + " should keep jumping.";
+            return Message.moveResult(board.copyBoard(), feedback, username);
+        }else{
+            mustContinue = false;
+        }
+
+        Message gameOverMsg = checkGameOver(playerColor, username);
         if(gameOverMsg != null) {return gameOverMsg;}
+
         currentTurn = (currentTurn == Piece.BLACK) ? Piece.RED : Piece.BLACK;
-        Message msg = new Message(MsgType.MOVE_RESULT, board.copyBoard(), "Move Applied.");
-        msg.playerTurn = (currentTurn == Piece.BLACK) ? player1 : player2;
+        String playerTurn = (currentTurn == Piece.BLACK) ? player1 : player2;
+        String jumpFeedback = username + " captured a piece!";
+        return Message.moveResult(board.copyBoard(), jumpFeedback, playerTurn);
+    }
+
+    private Message applyMove(String username, Piece playerColor, Move move){
+        board.movePiece(move);
+        Message gameOverMsg = checkGameOver(playerColor, username);
+        if(gameOverMsg != null) {return gameOverMsg;}
+
+        currentTurn = (currentTurn == Piece.BLACK) ? Piece.RED : Piece.BLACK;
+        String playerTurn = (currentTurn == Piece.BLACK) ? player1 : player2;
         mustContinue = false;
+
         board.printBoard();
         System.out.print(username + " MADE move: ");
         move.printMove();
-        return msg;
+
+        String moveConfirm = username + "'s move was applied";
+        return Message.moveResult(board.copyBoard(), moveConfirm, playerTurn);
     }
 
     private Message checkGameOver(Piece player, String username){
@@ -150,7 +152,7 @@ public class GameSession {
             System.out.println("GAME OVER");
             gameOver = true;
             winner = username;
-            return new Message(MsgType.GAME_OVER, winner);
+            return Message.gameOver(winner);
         }
         return null;
     }

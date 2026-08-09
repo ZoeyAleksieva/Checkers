@@ -126,31 +126,29 @@ public class Server{
 		}
 	}
 
-	public void handleMessage(Message message) throws IOException {
+	//Player message types: MOVE, CLIENT_CHAT, PLAY_AGAIN, QUIT
+	public void handleMessage(Message clientMsg, String username) throws IOException {
 		try{
-			switch (message.type){
+			switch (clientMsg.type){
 				case MOVE: {
-					System.out.println("CASE MOVE");
-					String user = message.username;
-					System.out.println(user);
-					GameSession game = games.get(user);
+					GameSession game = games.get(username);
 
 					//NULL CASE
 					if(game == null){
-						Message msg = new Message(MsgType.MOVE_FEEDBACK, user, "Error. No game.");
-						sendToPlayer(user, msg);
-						System.out.println("GAME NULL");
+						Message msg = Message.moveFeedback("Error. No active game.");
+						sendToPlayer(username, msg);
+						System.out.println("GAME IS NULL");
 						break;
 					}
 
 					//HANDLE MOVE
-					Message result = game.handleMove(user, message.move);
-
+					Message result = game.handleMove(username, clientMsg.move);
+					//handleMoveResult(username, result)
 					//GAME SESSIONS SENDS RESULT MESSAGE AND SERVER INTERPRETS HERE
 					if(result.type == MsgType.MOVE_FEEDBACK){
 						//send only to user
 						System.out.println("SENDING MOVE_FEEDBACK");
-						sendToPlayer(user, result);
+						sendToPlayer(username, result);
 						Message m = new Message(MsgType.GUI);
 						m.content = gameOrder.get(game) + " To: " + user + "Feedback: " + result.content;
 						m.playerTurn = user;
@@ -178,7 +176,7 @@ public class Server{
 						sendToPlayer(player_opponent.get(player), result);
 					}
 					break;
-				}
+				} //--------------------------------------------------------------------------------------------------------------
 				case QUIT: {
 					String user = message.username;
 					String opp = player_opponent.get(user);
@@ -448,8 +446,7 @@ public class Server{
 				 while(true) {
 					try {
 						Message clientMessage = (Message) in.readObject();
-						//System.out.println("Message from " + username + " received");
-						handleMessage(clientMessage);
+						handleMessage(clientMessage, username);
 					}
 					catch(Exception e) {
 						System.out.println("Streams not open (game loop)");
