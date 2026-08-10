@@ -53,7 +53,7 @@ public class GameSession {
         return playerColor == currentTurn;
     }
 
-    private boolean[] getMoveValidity(String username, Piece playerColor, Move move){
+    private boolean[] getMoveValidity(Piece playerColor, Move move){
         boolean valid = false;
         boolean canJump = false;
         ArrayList<Move> possibleMoves = board.getPlayerMoves(playerColor);
@@ -82,7 +82,7 @@ public class GameSession {
             return Message.moveFeedback("Must continue jumping with same piece.");
         }
         //-----------------------------------------------------------------
-        boolean[] validity = getMoveValidity(username, playerColor, move);
+        boolean[] validity = getMoveValidity(playerColor, move);
         boolean valid = validity[0];
         boolean canJump = validity[1];
 

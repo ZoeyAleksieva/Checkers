@@ -94,13 +94,13 @@ public class Server{
 		player_opponent.put(p2, p1);
 		//number game to keep track in log
 		gameOrder.put(game, "[GAME #" + count + "]");
-		Message msg = new Message(MsgType.GAME_START, game.playerTypes, game.board.copyBoard());
+		Message msg = Message.gameStart(game.playerTypes, game.board.copyBoard());
 		//both players get game obviously
 		sendToPlayer(p1, msg);
 		sendToPlayer(p2, msg);
 		//notify GUI
-		Message m = new Message(MsgType.GUI);
-		m.content = "[NEW GAME]: P1: " + p1 + " versus P2: "+ p2;
+		String log = "[NEW GAME]: P1: " + p1 + " versus P2: "+ p2;
+		Message m = Message.updateGUIlog(log);
 		callback.accept(m);
 	}
 
@@ -120,8 +120,8 @@ public class Server{
 				ct.out.flush();
 			}
 		}catch(Exception e){
-			Message m = new Message(MsgType.GUI);
-			m.content = "[ERROR]: Message to " + username + " FAILED!";
+			String log = "[ERROR]: Message to " + username + " FAILED!";
+			Message m =  Message.updateGUIlog(log);
 			callback.accept(m);
 		}
 	}
