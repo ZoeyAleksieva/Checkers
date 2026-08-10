@@ -126,6 +126,77 @@ public class Server{
 		}
 	}
 
+	private void sendMoveFeedback(String username, Message gameSessionFeedback, GameSession game){
+		sendToPlayer(username, gameSessionFeedback);
+		String log = gameOrder.get(game) + " To: " + username + "Feedback: " + gameSessionFeedback.feedback;
+		Message m = Message.updateGUIlog(log);
+		callback.accept(m);
+	}
+
+	private void sendMoveResult(String username, Message gameSessionFeedback, GameSession game){
+		System.out.println("SENDING MOVE_RESULT");
+
+		String opp = player_opponent.get(username);
+		sendToPlayer(username, gameSessionFeedback);
+		sendToPlayer(opp, gameSessionFeedback);
+
+		String log = gameOrder.get(game) + " " + username + " move result: " + gameSessionFeedback.moveConfirmMsg;
+		Message m = Message.updateGUIlog(log);
+		callback.accept(m);
+	}
+
+	private void sendGameOver(String username, Message gameSessionFeedback, GameSession game){
+		System.out.println("SENDING GAME_OVER");
+
+		String opp = player_opponent.get(username);
+		sendToPlayer(username, gameSessionFeedback);
+		sendToPlayer(opp, gameSessionFeedback);
+
+		String log = gameOrder.get(game) + " Game Over!" + gameSessionFeedback.winner + " wins!";
+		Message m = Message.updateGUIlog(log);
+		callback.accept(m);
+	}
+
+	private void sendGameDraw(String username, Message gameSessionFeedback, GameSession game){
+		System.out.println("SENDING GAME_OVER");
+
+		String opp = player_opponent.get(username);
+		sendToPlayer(username, gameSessionFeedback);
+		sendToPlayer(opp, gameSessionFeedback);
+
+		String log = gameOrder.get(game) + " Draw!";
+		Message m = Message.updateGUIlog(log);
+		callback.accept(m);
+	}
+
+	private void handleMove(Message clientMsg, String username){
+		GameSession game = games.get(username);
+
+		if(game == null){
+			Message msg = Message.moveFeedback("Error. No active game.");
+			sendToPlayer(username, msg);
+			System.out.println("GAME IS NULL");
+			return;
+		}
+
+		Message gameSessionFeedback = game.handleMove(username, clientMsg.move);
+
+		switch(gameSessionFeedback.type){
+			case MOVE_FEEDBACK:
+				sendMoveFeedback(username, gameSessionFeedback, game);
+				break;
+			case MOVE_RESULT:
+				sendMoveResult(username, gameSessionFeedback, game);
+				break;
+			case GAME_OVER:
+				sendGameOver(username, gameSessionFeedback, game);
+				break;
+			case DRAW:
+				sendGameDraw(username, gameSessionFeedback, game);
+				break;
+		}
+	}
+
 	//Player message types: MOVE, CLIENT_CHAT, PLAY_AGAIN, QUIT
 	public void handleMessage(Message clientMsg, String username) throws IOException {
 		try{
@@ -133,7 +204,6 @@ public class Server{
 				case MOVE: {
 					GameSession game = games.get(username);
 
-					//NULL CASE
 					if(game == null){
 						Message msg = Message.moveFeedback("Error. No active game.");
 						sendToPlayer(username, msg);
@@ -141,42 +211,9 @@ public class Server{
 						break;
 					}
 
-					//HANDLE MOVE
-					Message result = game.handleMove(username, clientMsg.move);
-					//handleMoveResult(username, result)
-					//GAME SESSIONS SENDS RESULT MESSAGE AND SERVER INTERPRETS HERE
-					if(result.type == MsgType.MOVE_FEEDBACK){
-						//send only to user
-						System.out.println("SENDING MOVE_FEEDBACK");
-						sendToPlayer(username, result);
-						Message m = new Message(MsgType.GUI);
-						m.content = gameOrder.get(game) + " To: " + user + "Feedback: " + result.content;
-						m.playerTurn = user;
-						callback.accept(m);
-					}else if(result.type == MsgType.MOVE_RESULT || result.type == MsgType.GAME_OVER){
-						System.out.println("SENDING MOVE_RESULT//GAME_OVER");
-						//send applied moves and game over to both
-						String opp = player_opponent.get(user);
-
-						Piece[][] snapshot1 = game.board.copyBoard();
-						Message msg = new Message(result.type, snapshot1, result.content);
-						msg.playerTurn = result.playerTurn;
-						msg.winner = result.winner;
-						msg.username = "ignore";
-						sendToPlayer(user, msg);
-						sendToPlayer(opp, msg);
-
-						Message m = new Message(MsgType.GUI);
-						m.content = gameOrder.get(game) + " " + user + " move result: " + result.content;
-						callback.accept(m);
-					}else{ //DRAW
-						String player = result.username;
-						result.winner = "Draw";
-						sendToPlayer(player, result);
-						sendToPlayer(player_opponent.get(player), result);
-					}
+					handleMove(clientMsg, username);
 					break;
-				} //--------------------------------------------------------------------------------------------------------------
+				}
 				case QUIT: {
 					String user = message.username;
 					String opp = player_opponent.get(user);
